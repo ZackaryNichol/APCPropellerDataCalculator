@@ -1,0 +1,11 @@
+# IntellijJ files
+.idea
+.DS_Store
+.gradle/
+/build/
+/out/
+
+# GitHub files
+README.md
+
+/src/main/resources/propellerData
