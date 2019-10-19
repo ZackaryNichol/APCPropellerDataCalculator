@@ -5,6 +5,10 @@
 /build/
 /out/
 
+#Gradle files
+.gradle
+/build/
+
 # GitHub files
 README.md
 
