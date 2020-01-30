@@ -36,8 +36,8 @@ public class Main {
      */
     private void run() {
         PropellerDataLoader dataSet = new PropellerDataLoader("src/main/resources/propellerData");
-        WebDriver pageDriver = initWebpage();
-        PageFormFill.fillPage(0, new PageForm(pageDriver), dataSet);
+        //WebDriver pageDriver = initWebpage();
+        PageFormFill.fillPage(0, null, dataSet);
     }
 
     /**

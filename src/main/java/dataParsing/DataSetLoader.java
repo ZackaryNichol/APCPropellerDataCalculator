@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 /**
- * A template for loading in a set of data files.
+ * Template for loading in a set of data files.
  */
 public abstract class DataSetLoader {
 

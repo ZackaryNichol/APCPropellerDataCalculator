@@ -47,8 +47,6 @@ class PropellerDataOrganizer extends DataSetOrganizer {
                 tableEndIndex++;
             }
         }
-        //System.out.println(name);
-        //mappedData.forEach((key, value) -> System.out.println(key + " " + Arrays.deepToString(value)));
     }
 
     /**

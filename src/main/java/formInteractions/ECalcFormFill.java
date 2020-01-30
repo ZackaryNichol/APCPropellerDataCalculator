@@ -16,16 +16,15 @@ class ECalcFormFill extends PageFormFill {
 
     /**
      * Calls for the input of data into ECalc, then calls for the creation of the output from ECalc
-     * @param form The ECalc form to fill
      * @param dataSet The propeller data to fill the form with
      */
     @Override
-    void runFormInput(PageForm form, DataSetLoader dataSet) {
+    void runFormInput(DataSetLoader dataSet) {
 
         //Loops through every line of every RPM data of every propeller file
         for (int i = 0; i < ((PropellerDataLoader) dataSet).getNumOfDiffProps(); i++) {
             String propName = ((PropellerDataLoader) dataSet).getPropTableName(i);
-            System.out.println("Writing matches for prop: " + propName);
+            System.out.println("Writing prop: " + propName);
 
             for (int propRPM : ((PropellerDataLoader) dataSet).getPropRPMs(i)) {
 
@@ -34,7 +33,7 @@ class ECalcFormFill extends PageFormFill {
                     double torqueValue = ((PropellerDataLoader) dataSet).getTorqueValue(i, propRPM, q);
                     if (torqueValue > 0.0) {
                         //inputECalcFields(form, torqueValue, propRPM);
-                        CalcOutput.writeCalcOutput(propName, propRPM, scrubECalcOutput());
+                        CalcOutput.writeCalcOutput(propName, torqueValue, propRPM);
                     }
                 }
 

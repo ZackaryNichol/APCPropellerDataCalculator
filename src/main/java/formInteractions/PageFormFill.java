@@ -17,15 +17,14 @@ public abstract class PageFormFill {
     public static void fillPage(int pageId, PageForm form, DataSetLoader dataSet) {
 
         if (pageId == 0) {
-            new ECalcFormFill().runFormInput(form, (PropellerDataLoader) dataSet);
+            new ECalcFormFill().runFormInput((PropellerDataLoader) dataSet);
         }
     }
 
     /**
      * Fills the given form with the given data
-     * @param form The form to fill
      * @param dataSet The data to fill the form with
      */
-    abstract void runFormInput(PageForm form, DataSetLoader dataSet);
+    abstract void runFormInput(DataSetLoader dataSet);
 
 }

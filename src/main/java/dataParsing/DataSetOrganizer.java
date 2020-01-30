@@ -7,8 +7,6 @@ import java.util.ArrayList;
  */
 abstract class DataSetOrganizer {
 
-    private String name;
-
     /**
      * Organizes the given data into a desirable format
      * @param rawData The unorganized given data
