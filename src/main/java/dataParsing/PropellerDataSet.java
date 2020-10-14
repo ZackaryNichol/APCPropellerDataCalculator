@@ -7,24 +7,24 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 /**
- * Organization a propeller data file into a LinkedHashMap(Integer (RPM), double[][] (actual data)) structure
+ * Organizes a propeller data file into a LinkedHashMap(Integer (RPM), double[][] (actual data)) structure
  */
-class PropellerDataOrganizer extends DataSetOrganizer {
+class PropellerDataSet {
 
-    private String name;
+    private final String name;
 
-    //The main datastructure that holds all the propeller data for this propeller
-    private LinkedHashMap<Integer, double[][]> mappedData;
+    //The main data structure that holds all the propeller data for this propeller
+    private final LinkedHashMap<Integer, double[][]> mappedData;
 
     /**
      * Organizes propeller data upon object creation
      * @param propName The name of the propeller associated with this object
      * @param rawData The parsed (cleaned) unorganized data from the data-set loader
      */
-    PropellerDataOrganizer(String propName, ArrayList<String[]> rawData) {
-        System.out.print("Created organizer for " + propName + ", organizing data ...");
+    PropellerDataSet(String propName, ArrayList<String[]> rawData) {
+        System.out.print("Created data set for " + propName + ", organizing data ...");
         this.name = propName;
-        mappedData = new LinkedHashMap<>();
+        this.mappedData = new LinkedHashMap<>();
         organizeData(rawData);
         System.out.print("Data organized! \n");
     }

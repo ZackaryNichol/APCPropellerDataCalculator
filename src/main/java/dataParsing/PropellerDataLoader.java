@@ -4,19 +4,23 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * A loader that loads all propeller data into an ArrayList< PropellerDataOrganizer >
  */
-public class PropellerDataLoader extends DataSetLoader {
+public class PropellerDataLoader {
 
     //The list that contains all propeller data of all propellers
-    private ArrayList<PropellerDataOrganizer> allPropellerData = new ArrayList<>();
+    private final ArrayList<PropellerDataSet> allPropellerData = new ArrayList<>();
 
     /**
-     * Calls for loading, then parsing of propeller data files
+     * A loaded propeller dataset
      * @param dataPath The root path of propeller data files
      */
     public PropellerDataLoader(String dataPath) {
@@ -24,10 +28,30 @@ public class PropellerDataLoader extends DataSetLoader {
     }
 
     /**
-     * Parses the given data file into its own PropellerDataOrganizer
+     * Parses each file from the given folder path into a PropellerDataSet, then adds that set to allPropellerData.
+     * @param dataPath The folder path to parse data from
+     */
+    private void loadDataFiles(String dataPath) {
+        try (Stream<Path> paths = Files.walk(Paths.get(dataPath))) {
+            paths.filter(Files::isRegularFile).forEach(path -> {
+                try {
+                    //Parses every file
+                    parseDataFile(new FileReader(path.toFile()));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            });
+            System.out.println("Organized " + allPropellerData.size() + " propeller data files.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Parses the given single data file into its own PropellerDataSet
      * @param fileToParse The given propeller data file to parse
      */
-    protected void parseDataFile(FileReader fileToParse) {
+    private void parseDataFile(FileReader fileToParse) {
         BufferedReader br = new BufferedReader(fileToParse);
         try {
             String currentLine = br.readLine();
@@ -43,9 +67,8 @@ public class PropellerDataLoader extends DataSetLoader {
                     dataTable.add(parsedLine);
                 }
             }
-            allPropellerData.add(new PropellerDataOrganizer(propName, dataTable));
-        }
-        catch (IOException e) {
+            allPropellerData.add(new PropellerDataSet(propName, dataTable));
+        } catch (IOException e) {
             System.err.println(e);
         }
     }
@@ -85,9 +108,9 @@ public class PropellerDataLoader extends DataSetLoader {
     }
 
     /**
-     * @return The number of propeller data files loaded
+     * @return The size of the loaded propeller data set
      */
-    public int getNumOfDiffProps() {
+    public int getNumOfProps() {
         return allPropellerData.size();
     }
 
