@@ -144,11 +144,19 @@ public class PropellerDataLoader {
      * @param propRPM The RPM to match with RPM data table
      * @param propRPMTableRowNum The line number of a given (by index proxy) RPM data table
      * @return A torque value from a specific given line (by index proxy) of the given (by index proxy) RPM data table
+     * in Foot-Pounds
      */
     public double getTorqueValue(int propIndex, int propRPM, int propRPMTableRowNum) {
-        /*System.out.print(allPropellerData.get(propIndex).getName() + " " + propRPM + " ");
-        System.out.print(allPropellerData.get(propIndex).getMappedData().get(propRPM)[propRPMTableRowNum][6]);
-        System.out.println(" ");*/
         return allPropellerData.get(propIndex).getMappedData().get(propRPM)[propRPMTableRowNum][6] * 12;
+    }
+
+    /**
+     * @param propIndex The propeller data file index
+     * @param propRPM The RPM to match with RPM data table
+     * @param propRPMTableRowNum The line number of a given (by index proxy) RPM data table
+     * @return A thrust value from a specific given line (by index proxy) of the given (by index proxy) RPM data table
+     */
+    public double getThrustValue(int propIndex, int propRPM, int propRPMTableRowNum) {
+        return allPropellerData.get(propIndex).getMappedData().get(propRPM)[propRPMTableRowNum][7];
     }
 }

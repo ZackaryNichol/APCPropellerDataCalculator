@@ -7,15 +7,17 @@ import dataParsing.PropellerDataLoader;
 public class Main {
 
     //The max voltage the driving motor can output
-    //TODO: Implement constraint
+    //TODO: Implement voltage constraint
     private static final double MAX_VOLTAGE = 22.2;
+    private static final double MINIMUM_TORQUE = 1.0;
+    private static final double MINIMUM_THRUST = 9.0;
 
     /**
      * Gathers all resources, then starts sending data to the webDriver.
      */
     private void run() {
         PropellerDataLoader dataSets = new PropellerDataLoader("src/main/resources/propellerData");
-        CalcOutput.outputFilteredDataSets(dataSets, MAX_VOLTAGE);
+        CalcOutput.outputFilteredDataSets(dataSets, MAX_VOLTAGE, MINIMUM_TORQUE, MINIMUM_THRUST);
     }
 
     /**

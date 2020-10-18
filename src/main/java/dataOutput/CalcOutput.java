@@ -28,7 +28,9 @@ public class CalcOutput {
      * @param dataSet The propeller data set to write if it passes the given constraints.
      * @param maxVoltage TODO: Implement
      */
-    public static void outputFilteredDataSets(PropellerDataLoader dataSet, double maxVoltage) {
+    public static void outputFilteredDataSets(
+        PropellerDataLoader dataSet, double maxVoltage, double minimumTorque, double minimumThrust
+    ) {
         //Loops through every line of every RPM data of every propeller file
         for (int i = 0; i < dataSet.getNumOfProps(); i++) {
             String propName = dataSet.getPropTableName(i);
@@ -38,8 +40,10 @@ public class CalcOutput {
 
                 for (int q = 0; q < dataSet.getPropDataNumOfRows(i, propRPM); q++) {
                     double torqueValue = dataSet.getTorqueValue(i, propRPM, q);
-                    if (torqueValue > 0.0) {
-                        CalcOutput.writeCalcOutput(propName, torqueValue, propRPM);
+                    double thrustValue = dataSet.getThrustValue(i, propRPM, q);
+
+                    if (torqueValue > minimumTorque && thrustValue > minimumThrust) {
+                        writeCalcOutput(propName, thrustValue, torqueValue, propRPM);
                     }
                 }
 
@@ -63,7 +67,7 @@ public class CalcOutput {
             FileWriter outputWriter = new FileWriter(outputFile, true);
             CSVWriter writer = new CSVWriter(outputWriter);
 
-            String[] columnLabels = { "PropName", "Torque(lbf-ft)", "RPM"};
+            String[] columnLabels = { "PropName", "Thrust (Lbf)", "Torque(lbf-ft)", "RPM" };
             writer.writeNext(columnLabels);
 
             writer.close();
@@ -80,7 +84,7 @@ public class CalcOutput {
      * @param propRPM An RPM from the propName prop to write
      */
     @Contract(pure = true)
-    private static void writeCalcOutput(String propName, double propTorque, int propRPM) {
+    private static void writeCalcOutput(String propName, double propTorque, double propThrust, int propRPM) {
 
         if (!fileInitialized) {
             initOutputFile();
@@ -90,7 +94,7 @@ public class CalcOutput {
             FileWriter outputWriter = new FileWriter(outputFile, true);
             CSVWriter writer = new CSVWriter(outputWriter);
 
-            String[] values = { propName, String.valueOf(propTorque), String.valueOf(propRPM) };
+            String[] values = { propName, String.valueOf(propTorque), String.valueOf(propThrust), String.valueOf(propRPM) };
             writer.writeNext(values);
 
             writer.close();

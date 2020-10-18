@@ -1,2 +1,2 @@
-# PropellerMotorMatchCalculator
-Plugs APC propeller performance data into ECalc.ch and collects the output
+# APCPropellerDataCalculator
+Calculates the ideal propeller for your constraints from the APC Propeller dataset
