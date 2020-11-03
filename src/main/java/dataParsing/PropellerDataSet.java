@@ -34,13 +34,18 @@ class PropellerDataSet {
      * @param rawData The given rawData
      */
     protected void organizeData(@NotNull ArrayList<String[]> rawData) {
-        int tableEndIndex = 1;
         int tableStartIndex = 1;
+        int tableEndIndex = 1;
 
         for (int i = 0; i < rawData.size(); i++) {
-            if ((rawData.get(i).length == 1 && i != 0) || i == rawData.size() - 1) {
+            if (rawData.get(i).length == 1) {
                 tableEndIndex = i;
-                mappedData.put(Integer.parseInt(rawData.get(tableStartIndex - 1)[0]), createDataArray(rawData, tableStartIndex, tableEndIndex));
+                if (tableEndIndex - tableStartIndex > 0) {
+                    mappedData.put(
+                        Integer.parseInt(rawData.get(tableStartIndex - 1)[0]),
+                        createDataArray(rawData, tableStartIndex, tableEndIndex)
+                    );
+                }
                 tableStartIndex = i + 1;
             }
             else {
@@ -58,9 +63,13 @@ class PropellerDataSet {
      */
     @NotNull
     private double[][] createDataArray(@NotNull ArrayList<String[]> rawData, int tableStartIndex, int tableEndIndex) {
-        double[][] dataArray = new double[tableEndIndex - tableStartIndex][rawData.get(1).length];
+        if (rawData.get(1).length <= 1) {
+            tableStartIndex++;
+        }
+
+        double[][] dataArray = new double[tableEndIndex - tableStartIndex][rawData.get(tableStartIndex).length];
         for (int i = tableStartIndex; i < tableEndIndex; i++) {
-            if (rawData.get(i).length == 1) {
+            if (rawData.get(i).length <= 1) {
                 System.out.println("Next set ...");
                 break;
             }
@@ -72,7 +81,6 @@ class PropellerDataSet {
                 }
             }
         }
-
         return dataArray;
     }
 

@@ -82,7 +82,7 @@ public class PropellerDataLoader {
     private String[] parseLine(@NotNull String lineToParse) {
         //Replace characters to allow for easier regex
         lineToParse = lineToParse.replace("-", " -");
-        lineToParse = lineToParse.replace("-NaN", " ");
+        lineToParse = lineToParse.replace("-NaN", " 0.00");
         lineToParse = lineToParse.trim().replaceAll(" +", " ");
 
         //Splits between every number
@@ -103,7 +103,7 @@ public class PropellerDataLoader {
             }
         }
 
-        //Returns null only is data file is incorrectly formatted
+        //Returns null if the line is unable to be parsed
         return null;
     }
 
