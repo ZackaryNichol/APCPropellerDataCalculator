@@ -15,4 +15,7 @@ dependencies {
     compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.141.59'
     compile 'org.jetbrains:annotations:17.0.0'
     compile 'com.opencsv:opencsv:4.6'
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+    compile group: 'org.apache.commons', name: 'commons-math3', version: '3.0'
+
 }

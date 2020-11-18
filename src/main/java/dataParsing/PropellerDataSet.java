@@ -1,20 +1,43 @@
 package dataParsing;
 
+import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.jetbrains.annotations.NotNull;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Set;
+
+import static dataParsing.PropellerDataLoader.MAX_FORWARD_AIRSPEED;
+import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
 
 /**
  * Organizes a propeller data file into a LinkedHashMap(Integer (RPM), double[][] (actual data)) structure
  */
-class PropellerDataSet {
+public class PropellerDataSet {
 
+    //Interpolator used for any linear interpolations
+    private static final LinearInterpolator interpolator = new LinearInterpolator();
+
+    //The name of this propeller
     private final String name;
 
     //The main data structure that holds all the propeller data for this propeller
     private final LinkedHashMap<Integer, double[][]> mappedData;
+
+    private double staticThrust;
+
+    //Table indexes
+    private static final int VELOCITY = 0;
+    private static final int ADVANCE_RATIO = 1;
+    private static final int EFFICIENCY = 2;
+    private static final int THRUST_COEFFICIENT = 3;
+    private static final int POWER_COEFFICIENT = 4;
+    private static final int POWER = 5;
+    private static final int TORQUE = 6;
+    private static final int THRUST = 7;
 
     /**
      * Organizes propeller data upon object creation
@@ -87,14 +110,174 @@ class PropellerDataSet {
     /**
      * @return The propeller name associated with this data-set organizer
      */
-    String getName() {
+    public String getName() {
         return name;
     }
 
     /**
-     * @return The mapped RPM tables associated with this data-set organizer's associated propeller
+     * @return All RPM values of this propeller data file
      */
-    HashMap<Integer, double[][]> getMappedData() {
-        return mappedData;
+    public Set<Integer> getPropRPMs() {
+        return mappedData.keySet();
+    }
+
+    /**
+     * @param propRPM The RPM to match with RPM data table
+     * @param propRPMTableRowNum The line number of a given (by index proxy) RPM data table
+     * @param index The index of the table line to get
+     * @return Whatever value is at the given indexes
+     */
+    private double getTableValue(int propRPM, int propRPMTableRowNum, int index) {
+        return mappedData.get(propRPM)[propRPMTableRowNum][index];
+    }
+
+    /**
+     * Gets the number of rows in a given RPM table data set
+     * @param propRPM The RPM table to look at
+     * @return The num of rows in the given RPM table
+     */
+    private int getRPMTableNumOfRows(int propRPM) {
+        return mappedData.get(propRPM).length;
+    }
+
+    /**
+     * Finds the closest two velocity line numbers in the RPM data table to the given velocity
+     * @param velocity The given velocity to compare against
+     * @param propRPM The RPM whose table is used
+     * @return The two closest velocity value line numbers
+     */
+    private int[] findClosestVelocities(double velocity, int propRPM) {
+
+        BigDecimal realVelocity = BigDecimal.valueOf(velocity);
+        int[] closestVelocities = new int[2];
+
+        for (int i = 0; i < getRPMTableNumOfRows(propRPM); i++) {
+
+            BigDecimal tableVelocity = BigDecimal.valueOf(getTableValue(propRPM, i, VELOCITY));
+
+            if (tableVelocity.max(realVelocity).equals(tableVelocity)) {
+                closestVelocities[1] = i;
+                closestVelocities[0] = i - 1;
+                break;
+            }
+        }
+        return closestVelocities;
+    }
+
+    /**
+     * Interpolates either power or thrust at the given velocity using the given propRPM's data table
+     * @param targetVelocity The velocity to interpolate at
+     * @param propRPM The RPM whose table to use
+     * @param thrustInterpolate Whether or not to interpolate thrust. Interpolates power if false
+     * @return The interpolated either power or thrust number at the given velocity
+     */
+    private double interpolateAtVelocity(double targetVelocity, int propRPM, boolean thrustInterpolate) {
+        int[] closestVelocities = findClosestVelocities(targetVelocity, propRPM);
+
+        double[] x = new double[2];
+        double[] y = new double[2];
+
+        if (closestVelocities[0] > -1 && closestVelocities[1] > -1 && (closestVelocities[0] != closestVelocities[1])) {
+            x[0] = getTableValue(propRPM, closestVelocities[0], VELOCITY);
+            x[1] = getTableValue(propRPM, closestVelocities[1], VELOCITY);
+
+            if (thrustInterpolate) {
+                y[0] = getTableValue(propRPM, closestVelocities[0], THRUST);
+                y[1] = getTableValue(propRPM, closestVelocities[1], THRUST);
+            }
+            else {
+                y[0] = getTableValue(propRPM, closestVelocities[0], POWER);
+                y[1] = getTableValue(propRPM, closestVelocities[1], POWER);
+            }
+
+            return interpolator.interpolate(x, y).value(targetVelocity);
+        }
+        return 0;
+    }
+
+    /**
+     * Interpolates dynamic thrust at the given velocity using rpm1 and rpm2's respective data tables
+     * @param velocity The velocity to get thrust numbers at
+     * @param rpm1 The lower RPM to use to interpolate data from
+     * @param rpm2 The higher RPM to use to interpolate data from
+     * @return The dynamic thrust number at the given velocity
+     */
+    public double getDynamicThrust(int velocity, int rpm1, int rpm2) {
+        double[] x = new double[2];
+        double[] y = new double[2];
+
+        x[0] = interpolateAtVelocity(velocity, rpm1, false);
+        x[1] = interpolateAtVelocity(velocity, rpm2, false);
+
+        y[0] = interpolateAtVelocity(velocity, rpm1, true);
+        y[1] = interpolateAtVelocity(velocity, rpm2, true);
+
+        if (x[1] > POWER_CONSTANT && x[0] < POWER_CONSTANT) {
+            return interpolator.interpolate(x, y).value(POWER_CONSTANT);
+        }
+        else {
+            return -1;
+        }
+    }
+
+    /**
+     * Predicts dynamic thrust at the given velocity using constants and the static thrust
+     * @param velocity The velocity to predict at
+     * @return The dynamic thrust prediction
+     */
+    public double getDynamicThrustPrediction(int velocity) {
+        return staticThrust - ((staticThrust * velocity) / MAX_FORWARD_AIRSPEED);
+    }
+
+    /**
+     * Interpolates an RPM at the given velocity using interpolated power numbers from the given rpms
+     * @param velocity The velocity to interpolate at
+     * @param rpm1 The lower bound RPM
+     * @param rpm2 The higher bound RPM
+     * @return The interpolated RPM number
+     */
+    public double InterpolateRPM(int velocity, int rpm1, int rpm2) {
+        double[] x = new double[2];
+        double[] y = new double[2];
+
+        x[0] = interpolateAtVelocity(velocity, rpm1, false);
+        x[1] = interpolateAtVelocity(velocity, rpm2, false);
+
+        y[0] = rpm1;
+        y[1] = rpm2;
+
+        if (x[1] > POWER_CONSTANT && x[0] < POWER_CONSTANT) {
+            return interpolator.interpolate(x, y).value(POWER_CONSTANT);
+        }
+        else {
+            return -1;
+        }
+    }
+
+    /**
+     * Interpolates the static thrust at the RPMs that are closest to the max output of the motor (POWER_CONSTANT)
+     * @return The interpolated static thrust
+     */
+    public double getStaticThrust() {
+        ArrayList<Integer> propRPMS = new ArrayList<>(getPropRPMs());
+
+        for (int i = 0; i < propRPMS.size(); i++) {
+            double currentPower = getTableValue(propRPMS.get(i), 0, POWER);
+
+            if (currentPower > POWER_CONSTANT) {
+                double[] x = new double[2];
+                double[] y = new double[2];
+
+                x[0] = getTableValue(propRPMS.get(i - 1), 0, POWER);
+                x[1] = currentPower;
+                y[0] = getTableValue(propRPMS.get(i - 1), 0, THRUST);
+                y[1] = getTableValue(propRPMS.get(i), 0, THRUST);
+
+                PolynomialSplineFunction test = interpolator.interpolate(x, y);
+                staticThrust = test.value(POWER_CONSTANT);
+                return staticThrust;
+            }
+        }
+        return 0;
     }
 }

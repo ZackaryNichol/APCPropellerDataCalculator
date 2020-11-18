@@ -2,11 +2,16 @@ package dataOutput;
 
 import com.opencsv.CSVWriter;
 import dataParsing.PropellerDataLoader;
+import dataParsing.PropellerDataSet;
 import org.jetbrains.annotations.Contract;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Set;
+
+import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
 
 /**
  * Outputs a structured csv file using the given data set and constraints
@@ -23,30 +28,46 @@ public class CalcOutput {
     private static File outputFile = new File("src/CalcOutput/" + OUTPUT_FILE_NAME + ".csv");
 
     /**
-     * Writes each propeller data set's data to this output file given that the propeller data fits the given
-     * constraints
-     * @param dataSet The propeller data set to write if it passes the given constraints.
-     * @param maxVoltage TODO: Implement
+     * Writes each propeller data set's dynamic thrust data to the output file
+     * @param allPropData The propeller data set to write
      */
-    public static void outputFilteredDataSets(
-        PropellerDataLoader dataSet, double maxVoltage, double minimumTorque, double minimumThrust
-    ) {
+    public static void writeDynamicThrustData(PropellerDataLoader allPropData) {
         //Loops through every line of every RPM data of every propeller file
-        for (int i = 0; i < dataSet.getNumOfProps(); i++) {
-            String propName = dataSet.getPropTableName(i);
+        for (int i = 0; i < allPropData.getNumOfProps(); i++) {
+
+            PropellerDataSet propData = allPropData.getPropellerDataAt(i);
+            String propName = propData.getName();
             System.out.println("Writing prop: " + propName);
 
-            for (int propRPM : dataSet.getPropRPMs(i)) {
+            ArrayList<Integer> propRPMS = new ArrayList<>(propData.getPropRPMs());
 
-                for (int q = 0; q < dataSet.getPropDataNumOfRows(i, propRPM); q++) {
-                    double torqueValue = dataSet.getTorqueValue(i, propRPM, q);
-                    double thrustValue = dataSet.getThrustValue(i, propRPM, q);
+            //Write static thrust
+            writeCalcOutput(
+                propName, 0, 0, POWER_CONSTANT, propData.getStaticThrust(),
+                propData.getDynamicThrustPrediction(0)
+            );
 
-                    if (torqueValue > minimumTorque && thrustValue > minimumThrust) {
-                        writeCalcOutput(propName, thrustValue, torqueValue, propRPM);
+            //Generates ~100-200 dynamic thrust numbers for each rpm
+            int velocityCounter = 1;
+            outer:
+            for (int j = 0; j < propRPMS.size() - 1; j++) {
+                for (int k = 0; k < 200; k++) {
+
+                    if (velocityCounter == 101) {
+                        break outer;
+                    }
+
+                    double interRPM = propData.InterpolateRPM(velocityCounter, propRPMS.get(j), propRPMS.get(j + 1));
+                    double interThrust = propData.getDynamicThrust(velocityCounter, propRPMS.get(j), propRPMS.get(j + 1));
+                    double predictedThrust = propData.getDynamicThrustPrediction(velocityCounter);
+
+                    if (interThrust > 0) {
+                        writeCalcOutput(
+                                propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust
+                        );
+                        velocityCounter++;
                     }
                 }
-
             }
         }
     }
@@ -67,7 +88,7 @@ public class CalcOutput {
             FileWriter outputWriter = new FileWriter(outputFile, true);
             CSVWriter writer = new CSVWriter(outputWriter);
 
-            String[] columnLabels = { "PropName", "Thrust (Lbf)", "Torque(lbf-ft)", "RPM" };
+            String[] columnLabels = { "PropName", "Velocity (mph)", "RPM", "Power (hp)", "Thrust (Lbf)", "Predicted Thrust"};
             writer.writeNext(columnLabels);
 
             writer.close();
@@ -78,13 +99,16 @@ public class CalcOutput {
     }
 
     /**
-     * Writes the given propeller data elements to this output file.
+     * Writes to the output file the given data in a structured csv format
      * @param propName The name of the prop to write
-     * @param propTorque The torque of the propName prop
-     * @param propRPM An RPM from the propName prop to write
+     * @param velocity The velocity value to write
+     * @param RPM The RPM value to write out
+     * @param power The power value to write
+     * @param thrust The thrust value to write
+     * @param prediction The thrust prediction value to write
      */
     @Contract(pure = true)
-    private static void writeCalcOutput(String propName, double propTorque, double propThrust, int propRPM) {
+    private static void writeCalcOutput(String propName, double velocity, double RPM, double power, double thrust, double prediction) {
 
         if (!fileInitialized) {
             initOutputFile();
@@ -94,7 +118,10 @@ public class CalcOutput {
             FileWriter outputWriter = new FileWriter(outputFile, true);
             CSVWriter writer = new CSVWriter(outputWriter);
 
-            String[] values = { propName, String.valueOf(propTorque), String.valueOf(propThrust), String.valueOf(propRPM) };
+            String[] values = {
+                propName, String.valueOf(velocity), String.valueOf(RPM), String.valueOf(power),
+                String.valueOf(thrust), String.valueOf(prediction)
+            };
             writer.writeNext(values);
 
             writer.close();
