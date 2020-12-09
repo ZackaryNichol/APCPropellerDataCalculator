@@ -1,14 +1,15 @@
 package dataParsing;
 
+import dataOutput.CalcOutput;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static dataParsing.PropellerDataLoader.MAX_FORWARD_AIRSPEED;
 import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
@@ -20,6 +21,8 @@ public class PropellerDataSet {
 
     //Interpolator used for any linear interpolations
     private static final LinearInterpolator interpolator = new LinearInterpolator();
+    private static final double[] velocities = IntStream.rangeClosed(0, CalcOutput.NUM_DATA_POINTS).asDoubleStream().toArray();
+    private final double[] interpolatedThrusts = new double[CalcOutput.NUM_DATA_POINTS + 1];
 
     //The name of this propeller
     private final String name;
@@ -27,6 +30,7 @@ public class PropellerDataSet {
     //The main data structure that holds all the propeller data for this propeller
     private final LinkedHashMap<Integer, double[][]> mappedData;
 
+    //The static thrust number for this propeller
     private double staticThrust;
 
     //Table indexes
@@ -213,7 +217,8 @@ public class PropellerDataSet {
         y[1] = interpolateAtVelocity(velocity, rpm2, true);
 
         if (x[1] > POWER_CONSTANT && x[0] < POWER_CONSTANT) {
-            return interpolator.interpolate(x, y).value(POWER_CONSTANT);
+            interpolatedThrusts[velocity] = interpolator.interpolate(x, y).value(POWER_CONSTANT);
+            return interpolatedThrusts[velocity];
         }
         else {
             return -1;
@@ -279,5 +284,12 @@ public class PropellerDataSet {
             }
         }
         return 0;
+    }
+
+    public String getThrustFormula() {
+        interpolatedThrusts[0] = staticThrust;
+        StringBuilder function = new StringBuilder();
+
+        return interpolator.interpolate(velocities, interpolatedThrusts).toString();
     }
 }

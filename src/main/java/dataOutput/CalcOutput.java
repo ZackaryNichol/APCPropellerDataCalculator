@@ -18,6 +18,9 @@ import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
  */
 public class CalcOutput {
 
+    //The number of dynamic thrust data points to collect for each propeller
+    public static final int NUM_DATA_POINTS = 50;
+
     //The output name of the file that propeller data will be written to
     private static final String OUTPUT_FILE_NAME = "UsefulPropellerData";
 
@@ -44,7 +47,7 @@ public class CalcOutput {
             //Write static thrust
             writeCalcOutput(
                 propName, 0, 0, POWER_CONSTANT, propData.getStaticThrust(),
-                propData.getDynamicThrustPrediction(0)
+                propData.getDynamicThrustPrediction(0), ""
             );
 
             //Generates ~100-200 dynamic thrust numbers for each rpm
@@ -53,19 +56,22 @@ public class CalcOutput {
             for (int j = 0; j < propRPMS.size() - 1; j++) {
                 for (int k = 0; k < 200; k++) {
 
-                    if (velocityCounter == 101) {
-                        break outer;
-                    }
-
                     double interRPM = propData.InterpolateRPM(velocityCounter, propRPMS.get(j), propRPMS.get(j + 1));
                     double interThrust = propData.getDynamicThrust(velocityCounter, propRPMS.get(j), propRPMS.get(j + 1));
                     double predictedThrust = propData.getDynamicThrustPrediction(velocityCounter);
 
-                    if (interThrust > 0) {
+                    if (interThrust > 0 && velocityCounter < NUM_DATA_POINTS) {
                         writeCalcOutput(
-                                propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust
+                                propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust, ""
                         );
                         velocityCounter++;
+                    }
+                    else if (velocityCounter == NUM_DATA_POINTS) {
+                        writeCalcOutput(
+                                propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust,
+                                propData.getThrustFormula()
+                        );
+                        break outer;
                     }
                 }
             }
@@ -88,7 +94,10 @@ public class CalcOutput {
             FileWriter outputWriter = new FileWriter(outputFile, true);
             CSVWriter writer = new CSVWriter(outputWriter);
 
-            String[] columnLabels = { "PropName", "Velocity (mph)", "RPM", "Power (hp)", "Thrust (Lbf)", "Predicted Thrust"};
+            String[] columnLabels = {
+                "PropName", "Velocity (mph)", "RPM", "Power (hp)", "Thrust (Lbf)",
+                "Predicted Thrust", "Thrust Formula"
+            };
             writer.writeNext(columnLabels);
 
             writer.close();
@@ -108,7 +117,9 @@ public class CalcOutput {
      * @param prediction The thrust prediction value to write
      */
     @Contract(pure = true)
-    private static void writeCalcOutput(String propName, double velocity, double RPM, double power, double thrust, double prediction) {
+    private static void writeCalcOutput(
+            String propName, double velocity, double RPM, double power,
+            double thrust, double prediction, String thrustFormula) {
 
         if (!fileInitialized) {
             initOutputFile();
@@ -120,7 +131,7 @@ public class CalcOutput {
 
             String[] values = {
                 propName, String.valueOf(velocity), String.valueOf(RPM), String.valueOf(power),
-                String.valueOf(thrust), String.valueOf(prediction)
+                String.valueOf(thrust), String.valueOf(prediction), thrustFormula
             };
             writer.writeNext(values);
 
