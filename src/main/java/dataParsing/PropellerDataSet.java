@@ -3,6 +3,8 @@ package dataParsing;
 import dataOutput.CalcOutput;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+import org.apache.commons.math3.fitting.PolynomialCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -20,8 +22,15 @@ import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
 public class PropellerDataSet {
 
     //Interpolator used for any linear interpolations
-    private static final LinearInterpolator interpolator = new LinearInterpolator();
+    private static final LinearInterpolator linInterp = new LinearInterpolator();
+
+    //Interpolator used to fit function to propdata
+    private static final PolynomialCurveFitter curveFit = PolynomialCurveFitter.create(3);
+
+    //The velocities used for this data set (x axis)
     private static final double[] velocities = IntStream.rangeClosed(0, CalcOutput.NUM_DATA_POINTS).asDoubleStream().toArray();
+
+    //The thrusts used for this data set (y axis)
     private final double[] interpolatedThrusts = new double[CalcOutput.NUM_DATA_POINTS + 1];
 
     //The name of this propeller
@@ -194,7 +203,7 @@ public class PropellerDataSet {
                 y[1] = getTableValue(propRPM, closestVelocities[1], POWER);
             }
 
-            return interpolator.interpolate(x, y).value(targetVelocity);
+            return linInterp.interpolate(x, y).value(targetVelocity);
         }
         return 0;
     }
@@ -217,7 +226,7 @@ public class PropellerDataSet {
         y[1] = interpolateAtVelocity(velocity, rpm2, true);
 
         if (x[1] > POWER_CONSTANT && x[0] < POWER_CONSTANT) {
-            interpolatedThrusts[velocity] = interpolator.interpolate(x, y).value(POWER_CONSTANT);
+            interpolatedThrusts[velocity] = linInterp.interpolate(x, y).value(POWER_CONSTANT);
             return interpolatedThrusts[velocity];
         }
         else {
@@ -252,7 +261,7 @@ public class PropellerDataSet {
         y[1] = rpm2;
 
         if (x[1] > POWER_CONSTANT && x[0] < POWER_CONSTANT) {
-            return interpolator.interpolate(x, y).value(POWER_CONSTANT);
+            return linInterp.interpolate(x, y).value(POWER_CONSTANT);
         }
         else {
             return -1;
@@ -278,18 +287,37 @@ public class PropellerDataSet {
                 y[0] = getTableValue(propRPMS.get(i - 1), 0, THRUST);
                 y[1] = getTableValue(propRPMS.get(i), 0, THRUST);
 
-                PolynomialSplineFunction test = interpolator.interpolate(x, y);
+                PolynomialSplineFunction test = linInterp.interpolate(x, y);
                 staticThrust = test.value(POWER_CONSTANT);
+                interpolatedThrusts[0] = staticThrust;
                 return staticThrust;
             }
         }
         return 0;
     }
 
+    /**
+     * Fits a function to this data set, x-axis being velocity and y-axis being thrust. Returns the coefficients of
+     * the fit function as a comma separated string.
+     * @return The comma separated coefficients as a string
+     */
     public String getThrustFormula() {
-        interpolatedThrusts[0] = staticThrust;
         StringBuilder function = new StringBuilder();
+        WeightedObservedPoints wop = new WeightedObservedPoints();
 
-        return interpolator.interpolate(velocities, interpolatedThrusts).toString();
+        for (int i = 0; i < interpolatedThrusts.length; i++) {
+            wop.add(velocities[i], interpolatedThrusts[i]);
+        }
+
+        double[] coeff = curveFit.fit(wop.toList());
+        //coeff[0] = staticThrust;
+
+        for (int i = 0; i < coeff.length; i++) {
+            function.append(coeff[i]);
+            if(i != coeff.length - 1) {
+                function.append(", ");
+            }
+        }
+        return function.toString();
     }
 }

@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Set;
 
 import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
 
@@ -19,7 +18,7 @@ import static dataParsing.PropellerDataLoader.POWER_CONSTANT;
 public class CalcOutput {
 
     //The number of dynamic thrust data points to collect for each propeller
-    public static final int NUM_DATA_POINTS = 50;
+    public static final int NUM_DATA_POINTS = 85;
 
     //The output name of the file that propeller data will be written to
     private static final String OUTPUT_FILE_NAME = "UsefulPropellerData";
@@ -50,9 +49,11 @@ public class CalcOutput {
                 propData.getDynamicThrustPrediction(0), ""
             );
 
+
             //Generates ~100-200 dynamic thrust numbers for each rpm
             int velocityCounter = 1;
-            outer:
+
+            outerLoop:
             for (int j = 0; j < propRPMS.size() - 1; j++) {
                 for (int k = 0; k < 200; k++) {
 
@@ -61,17 +62,18 @@ public class CalcOutput {
                     double predictedThrust = propData.getDynamicThrustPrediction(velocityCounter);
 
                     if (interThrust > 0 && velocityCounter < NUM_DATA_POINTS) {
-                        writeCalcOutput(
-                                propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust, ""
-                        );
+                            writeCalcOutput(
+                                    propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust, ""
+                            );
+                            if (velocityCounter == NUM_DATA_POINTS - 1) {
+                                velocityCounter++;
+                                writeCalcOutput(
+                                        propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust,
+                                        propData.getThrustFormula()
+                                );
+                                break outerLoop;
+                            }
                         velocityCounter++;
-                    }
-                    else if (velocityCounter == NUM_DATA_POINTS) {
-                        writeCalcOutput(
-                                propName, velocityCounter, interRPM, POWER_CONSTANT, interThrust, predictedThrust,
-                                propData.getThrustFormula()
-                        );
-                        break outer;
                     }
                 }
             }
